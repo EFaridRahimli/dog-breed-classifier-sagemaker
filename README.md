@@ -1,61 +1,49 @@
-# Image Classification using AWS SageMaker
+# Dog Breed Image Classification on AWS SageMaker
 
-Use AWS Sagemaker to train a pretrained model that can perform image classification by using the Sagemaker profiling, debugger, hyperparameter tuning and other good ML engineering practices. This can be done on either the provided dog breed classication data set or one of your choice.
+Fine-tunes a pretrained **ResNet-18** (PyTorch) to classify dog breeds, using the full SageMaker ML-engineering toolkit: **hyper-parameter tuning, Debugger, Profiler and a deployed inference endpoint**. Built for the Udacity AWS Machine Learning Engineer programme.
 
-## Project Set Up and Installation
-Enter AWS through the gateway in the course and open SageMaker Studio. 
-Download the starter files.
-Download/Make the dataset available. 
+## Pipeline
+1. **Data:** the dog-breed dataset is uploaded to S3 so SageMaker training jobs can read it.
 
-## Dataset
-The provided dataset is the dogbreed classification dataset which can be found in the classroom.
-The project is designed to be dataset independent so if there is a dataset that is more interesting or relevant to your work, you are welcome to use it to complete the project.
+   ![Dataset structure](viz.png)
+2. **Hyper-parameter tuning** (`hpo.py`): transfer learning on ResNet-18, training only the new fully connected head with Adam. Search space:
+   - learning rate: continuous, 0.001 – 0.1
+   - batch size: integer, 32 – 64
+3. **Training with Debugger and Profiler** (`train_model.py`), using the best hyper-parameters.
+4. **Deployment** (`inference.py`): the trained model is served as a SageMaker endpoint via `PyTorchModel` and queried with a test image.
 
-![Dataset Structure](./viz.png)
-### Access
-Upload the data to an S3 bucket through the AWS Gateway so that SageMaker has access to the data. 
+## Hyper-parameter tuning
+| | | |
+|---|---|---|
+| ![Tuning 1](screenshots/tuning1.JPG) | ![Tuning 2](screenshots/tunin2.JPG) | ![Tuning 3](screenshots/tuning3.JPG) |
 
-## Hyperparameter Tuning
-What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search
+## Debugging and profiling
+Debugger rules watched for **vanishing gradients, overfitting, overtraining and poor weight initialisation**.
 
-Remember that your README should:
-- Include a screenshot of completed training jobs
-- Logs metrics during the training process
-- Tune at least two hyperparameters
-- Retrieve the best best hyperparameters from all your training jobs
+- **Loss:** a healthy curve, dropping fast early and decreasing steadily through training.
+- **CPU:** high at the start, during data loading, as expected.
+- **GPU:** peaks during training steps and idles otherwise, which justified the GPU instance.
 
-## Debugging and Profiling
-In order to gurantee better training. Following shortcomings are adressed in debugger rules
-- Vanishing Gradients
-- Overfitting
-- Overtraining
-- Poor Weights
+| Loss | CPU utilisation | GPU utilisation |
+|---|---|---|
+| ![Loss](screenshots/loss.png) | ![CPU](screenshots/cpu.png) | ![GPU](screenshots/gpu.png) |
 
+The full profiler report is in `Debugger Profiler Report.pdf`.
 
-### Results
-Debugger provided healthy loss curve with rapid decrease in the initial phase as well as decreasing throught the training.
+## Deployed endpoint
+![Endpoint](screenshots/endpoint.JPG)
 
-In order to speed up training GPU instance type was selected. Profiler showed helathy logs for both CPU and GPU logs.
-CPU visualization in the notebook showed high utilization at the start which is correct. CPU was utilized to load the data. Concurrently GPU was not utilized.
-GPU was peaking during the training and at 0 during other segments of training.
+## Repository contents
+| File | Description |
+|------|-------------|
+| `train_and_deploy.ipynb` | Orchestration notebook: tuning, training, deployment, querying |
+| `hpo.py` | Training script for the tuning jobs |
+| `train_model.py` | Training script with Debugger/Profiler hooks |
+| `inference.py` | Model loading and inference handlers for the endpoint |
+| `Debugger Profiler Report.pdf` | SageMaker profiler report |
 
-![Tuning1](screenshots/tuning1.JPG)
-![Tuning2](screenshots/tunin2.JPG)
-![Tuning3](screenshots/tuning3.JPG)
-![cpuUtilization](screenshots/cpu.png)
-![gpuUtilization](screenshots/gpu.png)
-![loss](screenshots/loss.png)
+## Run it
+Open `train_and_deploy.ipynb` in SageMaker Studio, upload the dataset to an S3 bucket you own, update the bucket path, and run the cells in order. **Delete the endpoint afterwards** to avoid charges.
 
-PDF can be found in the project directory as Debugger Profiler Report.pdf
-
-
-## Model Deployment
-Final trained model was deployed to the Sagemaker as an inference endpoint used with the PyTorchModel. Model was deployed on the "ml.m5.large" instance type as not a lot of predictions are expected.
-
-Endpoint accepts the data as raw image bytes therefore all inputs have to be transformed.
-
-Predictions are returned as JSON therfore, have to parsed.
-
-Lastly predictions are shown as index therfore, have to be mapped to appropriate class.
-
-![endpoint](screenshots/endpoint.JPG)
+## Tech stack
+AWS SageMaker (HPO, Debugger, Profiler, Endpoints) · S3 · PyTorch · torchvision
