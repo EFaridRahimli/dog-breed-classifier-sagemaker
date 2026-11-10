@@ -45,4 +45,4 @@ def output_fn(prediction, content_type="application/json"):
     if content_type == "application/json":
         return json.dumps({"predicted_class_index": prediction})
     else:
-        raise Exception({content_type}")
+        raise Exception(f"Unsupported content type: {content_type}")
